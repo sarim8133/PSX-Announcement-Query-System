@@ -10,7 +10,7 @@ def test_compare_arms_reports_both_and_path_selection(monkeypatch):
     def fake_spine(question, records, today, client=None):
         g = next(x for x in GOLD if x["question"] == question)
         return {"path": g["gold_path"], "doc_ids": g["gold_doc_ids"], "answer": "x", "plan": None}
-    # vector arm: returns gold docs first (so recall@k = 1 where gold exists)
+    # vector arm: returns exactly the gold docs (perfect retrieval on scored questions)
     def fake_rag(question, records, index, k=4, client=None):
         g = next(x for x in GOLD if x["question"] == question)
         return {"doc_ids": g["gold_doc_ids"] or ["S001"], "answer": "x"}
@@ -21,6 +21,12 @@ def test_compare_arms_reports_both_and_path_selection(monkeypatch):
     out = compare_arms(GOLD, RECS, today="2026-06-20", k=4)
     assert out["spine"]["translation_exact"] == 1.0
     assert out["spine"]["path_selection_accuracy"] == 1.0
-    # structured questions have gold docs -> recall measurable; schema_blocked excluded
-    assert 0.0 <= out["vector"]["recall_at_k"] <= 1.0
+    assert out["vector"]["recall_at_k"] == 1.0
+    # directly-comparable doc_set metrics present for BOTH arms
+    assert out["spine"]["doc_set"]["recall"] == 1.0
+    assert out["vector"]["doc_set"]["recall"] == 1.0
+    assert out["spine"]["doc_set"]["precision"] == 1.0
+    # per-category breakdown includes vector_mrr now
+    assert "vector_mrr" in out["by_category"]["structured"]
     assert "by_category" in out
+    assert "note" in out

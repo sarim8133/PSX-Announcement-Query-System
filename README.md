@@ -61,9 +61,16 @@ python -m psxq.run_compare \
 The command prints a single JSON object containing:
 - `spine.translation_exact` — fraction of questions where the structured filter retrieved exactly the gold doc set
 - `spine.path_selection_accuracy` — fraction of questions where the correct answer field was selected
+- `spine.doc_set` — precision/recall/f1 of the spine's predicted doc set against gold (directly comparable with vector)
 - `vector.recall_at_k` — fraction of gold docs found in the top-k retrieved chunks (schema_blocked questions excluded from retrieval scoring)
 - `vector.mrr` — mean reciprocal rank of the first relevant chunk (schema_blocked questions excluded)
-- `by_category` — per-question-category breakdown of both arms
+- `vector.doc_set` — precision/recall/f1 of the vector arm's top-k doc set against gold (directly comparable with spine)
+- `by_category` — per-question-category breakdown of both arms, including `vector_mrr` per category
+- `note` — explanation of the metric distinction
+
+**Metric honesty**
+
+The spine is set-based: it returns an exact predicted set of documents, so its natural metric is exact-set match and doc-set precision. The vector arm is ranked top-k: its natural metrics are recall@k and MRR, which give credit for a gold document appearing anywhere in the top-k. To make the comparison directly honest, the harness also computes doc-set precision/recall/f1 for both arms over the same scored questions — these are on the same scale and can be read side-by-side. Note that recall@k tends to flatter the vector arm relative to doc-set recall, because it awards full credit even when the gold doc appears last in the top-k list.
 
 **Hypothesis**
 
