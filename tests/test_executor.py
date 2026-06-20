@@ -44,3 +44,12 @@ def test_company_substring_contains():
     plan = QueryPlan(path="structured",
                      filters=[{"field": "company_name", "op": "contains", "value": "cement"}])
     assert ids(execute(plan, RECS)) == ["S002"]
+
+from psxq.models import Predicate
+from psxq.executor import _match
+
+def test_between_with_malformed_target_returns_false_not_crash():
+    # scalar instead of [lo, hi] must fail soft, not raise
+    assert _match("2026-06-20", "between", "2026-06-20") is False
+    assert _match("2026-06-20", "between", ["2026-06-01"]) is False
+    assert _match("2026-06-20", "between", ["2026-06-01", "2026-06-30"]) is True

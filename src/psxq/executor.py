@@ -51,6 +51,8 @@ def _match(value: Any, op: str, target: Any) -> bool:
         except TypeError:
             return False
     if op == "between":
+        if not isinstance(target, (list, tuple)) or len(target) != 2:
+            return False
         d = _as_date(value)
         lo, hi = _as_date(target[0]), _as_date(target[1])
         return bool(d and lo and hi and lo <= d <= hi)

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import argparse
 import json
+from pathlib import Path
 from psxq.corpus import load_corpus
 from psxq.eval.harness import run_eval
 
@@ -12,7 +13,7 @@ def main() -> None:
     ap.add_argument("--trials", type=int, default=3)
     args = ap.parse_args()
     records = load_corpus(args.records)
-    gold = json.loads(open(args.gold, encoding="utf-8").read())
+    gold = json.loads(Path(args.gold).read_text(encoding="utf-8"))
     out = run_eval(gold, records, today=args.today, trials=args.trials)
     summary = {k: out[k] for k in ["translation_exact", "answer_correct", "answer_grounded"]}
     print(json.dumps({"summary": summary, "schema_coverage": out["schema_coverage"],

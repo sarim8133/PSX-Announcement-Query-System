@@ -2,7 +2,6 @@ from __future__ import annotations
 from psxq.models import Record
 from psxq.pipeline import answer_question
 from psxq.generator import render_records
-from psxq.executor import execute
 from psxq.eval.judge import judge_answer
 from psxq.eval.metrics import doc_set_metrics, schema_coverage, aggregate
 
