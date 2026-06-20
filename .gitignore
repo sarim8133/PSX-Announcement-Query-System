@@ -6,4 +6,7 @@ data/real/
 *.pdf
 # real extractions / gold sets are proprietary-compilation data — never commit
 data/**/real_*.json
+# real Project-1 gold/extraction files kept at repo root — never commit (PSX no-redistribution)
+gold_set.json
+gold_set_full.json
 *.egg-info/
