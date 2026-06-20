@@ -39,3 +39,38 @@ The command prints a JSON summary containing:
 - `trials` — number of independent runs averaged
 
 Results will be recorded here after the real-data run.
+
+## Spine vs vector-RAG comparison
+
+**Purpose**
+
+An honest head-to-head: the structured spine vs a fairly-built pure vector-RAG arm on the same questions. Both arms receive the same corpus and the same gold set; neither is tuned to win.
+
+**Command**
+
+```bash
+python -m psxq.run_compare \
+  --records data/real/records.json \
+  --gold data/real/gold_questions.json \
+  --today 2026-06-20 \
+  --k 4
+```
+
+**What it reports**
+
+The command prints a single JSON object containing:
+- `spine.translation_exact` — fraction of questions where the structured filter retrieved exactly the gold doc set
+- `spine.path_selection_accuracy` — fraction of questions where the correct answer field was selected
+- `vector.recall_at_k` — fraction of gold docs found in the top-k retrieved chunks (schema_blocked questions excluded from retrieval scoring)
+- `vector.mrr` — mean reciprocal rank of the first relevant chunk (schema_blocked questions excluded)
+- `by_category` — per-question-category breakdown of both arms
+
+**Hypothesis**
+
+The structured spine should win on filter-shaped questions (ticker lookups, date-range filters, numeric comparisons) where the query maps cleanly onto schema fields. The vector arm should tie or win on the genuinely fuzzy minority — open-ended questions where the answer is buried in prose rather than a structured field.
+
+**Honesty note**
+
+At ~30 docs the "vector index" is numpy cosine similarity — there is no Faiss, no chunking pipeline, no production infrastructure. The contribution is the measured comparison and the judgment it enables, not the retrieval infrastructure.
+
+Results will be recorded here after the real-data run.
