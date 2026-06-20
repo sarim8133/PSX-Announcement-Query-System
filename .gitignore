@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+.venv/
+.env
+data/real/
+*.pdf
+# real extractions / gold sets are proprietary-compilation data — never commit
+data/**/real_*.json
+*.egg-info/
