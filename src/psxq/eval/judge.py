@@ -21,5 +21,13 @@ def judge_answer(question: str, gold_facts, answer: str, context: str, client=No
     prompt = JUDGE_PROMPT.format(question=question, facts=gold_facts, context=context,
                                  answer=answer, nonce=time.time_ns())
     raw = call_model(prompt, client=client)
-    data = json.loads(strip_fences(raw))
+    cleaned = strip_fences(raw)
+    try:
+        data = json.loads(cleaned)
+    except json.JSONDecodeError:
+        # Extract true/false values directly when JSON is malformed
+        import re
+        correct = bool(re.search(r'"correct"\s*:\s*true', cleaned, re.IGNORECASE))
+        grounded = bool(re.search(r'"grounded"\s*:\s*true', cleaned, re.IGNORECASE))
+        return {"correct": correct, "grounded": grounded}
     return {"correct": bool(data["correct"]), "grounded": bool(data["grounded"])}

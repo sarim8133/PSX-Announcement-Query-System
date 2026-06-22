@@ -15,6 +15,8 @@ def strip_fences(raw: str) -> str:
 
 def parse_and_validate_plan(raw: str) -> QueryPlan:
     data = json.loads(strip_fences(raw))
+    if data.get("filters") is None:
+        data["filters"] = []
     return QueryPlan(**data)
 
 PLANNER_PROMPT = """You translate a question about PSX corporate announcements into a JSON query plan.
@@ -34,8 +36,14 @@ Operators: eq, neq, in, contains, gt, gte, lt, lte, between, before, after.
 For list fields (announcement_signals) use "contains" with a single value.
 
 Choose exactly one path:
-- "structured": answerable by filtering the fields above.
-- "semantic": genuinely fuzzy intent not expressible as field predicates.
+- "structured": the key distinction maps cleanly to field predicates, even if the question
+  sounds broad. e.g. "fund companies distributed dividends" -> signals contains "Dividend";
+  "Ghani ChemWorld right issue activity" -> signals contains "Right Issue".
+- "semantic": the key distinction requires reading document text beyond what field predicates
+  capture, even if some schema fields are adjacent. e.g. "extraordinary general meetings" ->
+  the "General Meeting" signal does not distinguish ordinary vs extraordinary; needs text.
+  e.g. "routine administrative noise" -> no field captures whether an announcement is
+  meaningful; needs judgment.
 - "schema_blocked": the answer is NOT representable in the schema (right/bonus issue
   ratio or subscription price, multi-tranche record dates, meeting outcomes, Shariah
   compliance). Set schema_blocked_reason. Do NOT invent fields.

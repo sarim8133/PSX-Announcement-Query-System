@@ -10,3 +10,5 @@ data/**/real_*.json
 gold_set.json
 gold_set_full.json
 *.egg-info/
+# local handoff / context notes — keep private (portfolio strategy + P1 internal notes)
+PROJECT_CONTEXT.md
