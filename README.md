@@ -261,25 +261,26 @@ At ~30 docs the "vector index" is numpy cosine similarity — there is no Faiss,
 
 **Results** (spine: 3-trial mean [min–max] at temp 1.0; vector: single deterministic pass; k=4; 30 gold questions). Produced by `scripts/compare_trials.py`.
 
-The structured spine wins on the honest same-scale metric (doc-set F1), and the thesis holds: this corpus is filter-shaped, and structured query beats embeddings on it.
+**The hypothesis was directionally right but quantitatively wrong — and that is the result worth leading with.** I predicted the vector arm would *tie or win* on the fuzzy semantic minority. It did not: it *narrowed* the gap (structured ~26pp → semantic ~14pp) but never overtook the spine on the honest same-scale metric. My own stated prediction was partly off, and the data says so plainly.
+
+With that established, the measured payoff — doc-set F1, the one metric on the same scale for both arms:
 
 | Arm | doc-set F1 | precision | recall | recall@4 | MRR |
 |-----|-----------|-----------|--------|----------|-----|
 | **spine** (3-trial) | **76.9% [74.1–79.0]** | 79.2% [76.7–81.5] | 79.2% [75.4–81.1] | — (set-based) | — |
 | vector-RAG | 55.0% | 50.0% | 72.5% | 72.5% | 0.788 |
 
-Spine also routes correctly **94.4% [90.0–96.7]** of the time and exactly matches the gold doc set on **74.4% [73.3–76.7]** of questions.
-
-### By category — and the recall@k flattery, made concrete
-
 | Category | spine F1 (3-trial) | vector F1 | vector recall@4 |
 |----------|--------------------|-----------|-----------------|
 | structured | 79.8% [79.8–79.8] | 53.3% | 62.2% |
 | semantic | 71.8% [64.2–77.8] | 58.0% | 90.6% |
 
-1. **The gap narrows on semantic, as hypothesized — but the spine still wins on F1.** Structured: spine leads by ~26pp. Semantic: the gap closes to ~14pp (the vector arm's relative best), but it does not overtake. The hypothesis ("vector ties or wins the fuzzy minority") is *directionally* right and *quantitatively* wrong on the honest metric — vector never leads on F1. (Note the spine's structured F1 has zero variance across trials, while its semantic F1 swings [64.2–77.8] — the same structured-stable / boundary-noisy split the routing analysis found.)
-2. **recall@k flatters the vector arm exactly as warned.** On semantic, vector's recall@4 is **90.6%** — its single most impressive number — while its F1 is **58.0%**. That 33-point gap is the cost of returning a fixed k=4 docs regardless of how many are actually relevant: recall@k rewards finding the gold doc *somewhere* in the top-4; F1 penalizes the wrong docs dragged along with it. Headlining recall@k would have told a "vector is competitive on semantic" story the same-scale F1 refutes.
+Spine routes correctly **94.4% [90.0–96.7]** of the time and exactly matches the gold doc set on **74.4% [73.3–76.7]** of questions. It leads on F1 in both scored categories — by ~26pp on structured, ~14pp on semantic — the narrowed-but-never-overtaken gap above.
 
-**The structural advantage F1 can't show.** schema_blocked questions have no gold docs, so they are excluded from F1/recall — but a pure top-k retriever *cannot abstain*: it always returns k documents, so it would surface "answers" for questions that have none. The spine routes these to `schema_blocked` and returns nothing. Knowing when *not* to answer is invisible to retrieval metrics and is a categorical spine advantage on this corpus.
+**recall@k flatters the vector arm exactly as warned — shown firing in the data.** On semantic, vector's recall@4 is **90.6%** (its single most impressive number) while its F1 is **58.0%** — a 33-point gap. recall@k rewards finding the gold doc *somewhere* in the top-4; F1 penalizes the wrong docs dragged along with it (a fixed k=4 return tanks precision when fewer docs are actually relevant). Headlining recall@k would have sold a "vector is competitive on semantic" story the same-scale F1 refutes — so F1 leads here, and recall@k is the cautionary secondary.
 
-**Bottom line:** structured-first was the right call here — it wins on the honest metric in every scored category, and it can decline unanswerable questions, which a top-k retriever structurally cannot. The vector arm closes the gap only on semantic questions, and only on the metric that flatters it.
+**The comparison independently reproduced the routing analysis's stability finding.** The spine's structured F1 has *zero* variance across trials [79.8–79.8] while its semantic F1 swings [64.2–77.8] — the same structured-stable / boundary-noisy split the routing analysis above found by an entirely unrelated measurement. Two different methods landing on the same split is converging evidence it is a real property of the task, not an artifact of either method.
+
+**An architectural difference the F1 numbers do *not* capture.** schema_blocked questions have no gold docs, so they were *excluded* from F1/recall scoring for both arms. Outside those numbers there is a real structural difference: a pure top-k retriever cannot abstain — it always returns k documents — whereas the spine routes unanswerable questions to `schema_blocked` and returns nothing. I flag this as an architectural property, **not** a measured win, precisely because it sits outside the scored comparison.
+
+**Bottom line:** my hypothesis was directionally right and quantitatively wrong — vector narrowed the gap on the fuzzy questions but never overtook the spine on the honest metric, and looked competitive only on the metric (recall@k) that flatters it. Structured-first was the right call for this corpus — measured where measurable, flagged as architectural where not.
