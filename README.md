@@ -27,11 +27,6 @@ numbers can be *trusted*, because I visibly break my own claims before publishin
 
 ---
 
-Ask questions in plain English over structured extractions of Pakistan Stock Exchange (PSX) corporate
-announcements — *"which companies have a board meeting after June 20?"*, *"which announcements are in a
-closed period?"* — and get a grounded answer with its source documents. The question is translated into
-structured filter predicates, executed in Python, and answered from the matching records.
-
 ## What this is — and the thesis
 
 **Most questions over this corpus are filters, not semantic search.** Dates, event types, numeric
