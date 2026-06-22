@@ -1,5 +1,32 @@
 # PSX Announcement Query System
 
+## In plain English (for non-technical readers)
+
+This tool lets you ask everyday questions about Pakistan Stock Exchange company announcements —
+*"which companies have a board meeting after June 20?"* — and get the answer, with its source, in
+seconds.
+
+**The idea.** Most such questions are really *filters* — a date, an amount, an event type — like
+filtering a spreadsheet, not fuzzy "search." The popular AI approach ("RAG": let an AI read everything
+and guess what's relevant) is actually worse for this: slower, fuzzier, and it can't explain itself or
+admit when there is no answer. So this does the opposite — it turns your question into an exact filter,
+and only calls on the AI for the genuinely fuzzy questions. It also knows when to say *"I can't answer
+that"* instead of inventing something.
+
+**Tested honestly, not just claimed.** I also built the popular AI-search version and ran a fair
+head-to-head on the same questions. Mine scored **77%** vs **55%**. I had *predicted* the AI version
+would win on the fuzzy questions — it didn't, and I report that plainly.
+
+**The part that matters most.** Throughout, I kept catching and correcting my *own* mistakes — even
+ones that made my results look better. One change first appeared to give a **+11%** improvement; I dug
+in, found that half of it was a measurement fluke, and cut my own number in half. This happened seven
+times, in both directions. The point is not a chart going up — anyone can show that — it is that the
+numbers can be *trusted*, because I visibly break my own claims before publishing them.
+
+*Technical write-up follows.*
+
+---
+
 Ask questions in plain English over structured extractions of Pakistan Stock Exchange (PSX) corporate
 announcements — *"which companies have a board meeting after June 20?"*, *"which announcements are in a
 closed period?"* — and get a grounded answer with its source documents. The question is translated into
