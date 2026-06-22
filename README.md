@@ -1,11 +1,43 @@
 # PSX Announcement Query System
 
-NL questions over PSX corporate-announcement extractions: question -> structured filter -> grounded answer, measured. Optional vector-RAG arm for an honest comparison. See `docs/superpowers/specs/`.
+Ask questions in plain English over structured extractions of Pakistan Stock Exchange (PSX) corporate
+announcements — *"which companies have a board meeting after June 20?"*, *"which announcements are in a
+closed period?"* — and get a grounded answer with its source documents. The question is translated into
+structured filter predicates, executed in Python, and answered from the matching records.
 
-**Data is not shipped** (PSX prohibits redistribution). The repo ships synthetic examples in `data/synthetic/`; real PDFs/JSON stay local and gitignored. Scraping PSX is prohibited — source PDFs are downloaded manually.
+## What this is — and the thesis
 
-## Run
-`pip install -e ".[dev]"` then `pytest`. To run eval on real data: set `GEMINI_API_KEY`, point the harness at `data/real/`.
+**Most questions over this corpus are filters, not semantic search.** Dates, event types, numeric
+thresholds, boolean flags — they map cleanly onto schema fields, and a structured query answers them
+exactly and explainably. Classic vector RAG (embed everything, retrieve top-k, generate) is the
+reflexive choice for "ask questions over documents," but it is the wrong tool when the corpus is
+already structured and the questions are predicates.
+
+So the system is **structured-query-first**, with a three-path router:
+
+- `structured` — the question maps to field predicates; answer by filtering.
+- `semantic` — the distinction needs reading prose; answer by an LLM relevance pass.
+- `schema_blocked` — the answer is not representable in the schema; say so honestly instead of hallucinating.
+
+To keep "structured beats embeddings here" an *argument* rather than an assertion, the repo includes a
+fairly-built pure vector-RAG arm and a head-to-head harness — the point is to **measure** whether
+structured-first actually wins on the filter-shaped majority, not just claim it.
+
+**What it demonstrates:** NL→structured-query translation with optional-fence-robust JSON parsing; a
+router that knows when a question is unanswerable; an evaluation harness reporting 3-trial mean+range
+(never single-run); and — the part worth reading — a measurement-audit discipline that caught and
+corrected the project's own results five times (see [Results](#results-real-data-run-30-gold-questions)).
+
+**Data is not shipped** (PSX prohibits redistribution). The repo ships synthetic examples in
+`data/synthetic/`; real PDFs/JSON stay local and gitignored. Scraping PSX is prohibited — source PDFs
+are downloaded manually. Design details: `docs/superpowers/specs/`.
+
+## Quickstart
+
+```
+pip install -e ".[dev]"
+pytest          # 42 tests; no API key needed (LLM calls are mocked)
+```
 
 ## Running the evaluation
 
@@ -40,7 +72,12 @@ The command prints a JSON summary containing:
 
 ## Results (real-data run, 30 gold questions)
 
-This section leads with a measurement audit rather than a score — because the most
+**Bottom line:** a planner-prompt fix improves **routing +3.7pp** (sign-robust at N=10) and
+**retrieval +4.5pp** (suggestive, n=3); **correctness +5.5pp**, but unproven at n=3 (ranges overlap).
+The more valuable result is the **measurement audit** below — half of an initial *+11.1%* correctness
+headline turned out to be a single-trial artifact, caught and corrected before publishing.
+
+This section leads with that measurement audit rather than a score — because the most
 useful result here was catching a favorable number that turned out to be half artifact,
 and reporting the smaller true effect on purpose.
 
@@ -222,4 +259,27 @@ The structured spine should win on filter-shaped questions (ticker lookups, date
 
 At ~30 docs the "vector index" is numpy cosine similarity — there is no Faiss, no chunking pipeline, no production infrastructure. The contribution is the measured comparison and the judgment it enables, not the retrieval infrastructure.
 
-Results will be recorded here after the real-data run.
+**Results** (spine: 3-trial mean [min–max] at temp 1.0; vector: single deterministic pass; k=4; 30 gold questions). Produced by `scripts/compare_trials.py`.
+
+The structured spine wins on the honest same-scale metric (doc-set F1), and the thesis holds: this corpus is filter-shaped, and structured query beats embeddings on it.
+
+| Arm | doc-set F1 | precision | recall | recall@4 | MRR |
+|-----|-----------|-----------|--------|----------|-----|
+| **spine** (3-trial) | **76.9% [74.1–79.0]** | 79.2% [76.7–81.5] | 79.2% [75.4–81.1] | — (set-based) | — |
+| vector-RAG | 55.0% | 50.0% | 72.5% | 72.5% | 0.788 |
+
+Spine also routes correctly **94.4% [90.0–96.7]** of the time and exactly matches the gold doc set on **74.4% [73.3–76.7]** of questions.
+
+### By category — and the recall@k flattery, made concrete
+
+| Category | spine F1 (3-trial) | vector F1 | vector recall@4 |
+|----------|--------------------|-----------|-----------------|
+| structured | 79.8% [79.8–79.8] | 53.3% | 62.2% |
+| semantic | 71.8% [64.2–77.8] | 58.0% | 90.6% |
+
+1. **The gap narrows on semantic, as hypothesized — but the spine still wins on F1.** Structured: spine leads by ~26pp. Semantic: the gap closes to ~14pp (the vector arm's relative best), but it does not overtake. The hypothesis ("vector ties or wins the fuzzy minority") is *directionally* right and *quantitatively* wrong on the honest metric — vector never leads on F1. (Note the spine's structured F1 has zero variance across trials, while its semantic F1 swings [64.2–77.8] — the same structured-stable / boundary-noisy split the routing analysis found.)
+2. **recall@k flatters the vector arm exactly as warned.** On semantic, vector's recall@4 is **90.6%** — its single most impressive number — while its F1 is **58.0%**. That 33-point gap is the cost of returning a fixed k=4 docs regardless of how many are actually relevant: recall@k rewards finding the gold doc *somewhere* in the top-4; F1 penalizes the wrong docs dragged along with it. Headlining recall@k would have told a "vector is competitive on semantic" story the same-scale F1 refutes.
+
+**The structural advantage F1 can't show.** schema_blocked questions have no gold docs, so they are excluded from F1/recall — but a pure top-k retriever *cannot abstain*: it always returns k documents, so it would surface "answers" for questions that have none. The spine routes these to `schema_blocked` and returns nothing. Knowing when *not* to answer is invisible to retrieval metrics and is a categorical spine advantage on this corpus.
+
+**Bottom line:** structured-first was the right call here — it wins on the honest metric in every scored category, and it can decline unanswerable questions, which a top-k retriever structurally cannot. The vector arm closes the gap only on semantic questions, and only on the metric that flatters it.
