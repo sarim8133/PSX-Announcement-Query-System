@@ -1,6 +1,6 @@
 # PSX Announcement Query System
 
-## In plain English (for non-technical readers)
+## In plain English 
 
 This tool lets you ask everyday questions about Pakistan Stock Exchange company announcements —
 *"which companies have a board meeting after June 20?"* — and get the answer, with its source, in
